@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
+import timeit
 import xgboost as xgb
 
 def load_mnist(path, kind='train'):
@@ -60,7 +61,10 @@ def train(X_train, X_valid, y_train, y_valid):
     d_train = xgb.DMatrix(X_train, label=y_train)
     d_val = xgb.DMatrix(X_valid, label=y_valid)
     eval_list = [(d_train, 'train'), (d_val, 'validation')]
+
+    start_time = timeit.default_timer()
     bst = xgb.train(param_list, d_train, n_rounds, evals=eval_list, early_stopping_rounds=early_stopping, verbose_eval=True)
+    print('%6.3f sec' % (timeit.default_timer() - start_time))
 
     return bst
 
@@ -77,7 +81,8 @@ def predict(X_test, y_test, bst):
 
     ### Checking accuracy for fashion and MNIST datasets respectively
 
-    return np.sum(y_pred == y_test) / y_test.shape
+    acc = np.sum(y_pred == y_test) / y_test.shape
+    print('accuracy %5.2f%%' % (acc * 100.))
 
 if __name__ == '__main__':
 
@@ -85,12 +90,10 @@ if __name__ == '__main__':
     X_train, X_valid, y_train, y_valid = preprocess(X_main, y_main)
 
     bst = train(X_train, X_valid, y_train, y_valid)
-    acc = predict(X_test, y_test, bst)
-    print(acc)
+    predict(X_test, y_test, bst)
 
-    X_mnist, y_mnist, X_test_mnist, y_test_mnist = load_data('data/mnist')
-    X_mn_train, X_mn_valid, y_mn_train, y_mn_valid = preprocess(X_mnist, y_mnist)
+    X_main, y_main, X_test, y_test = load_data('data/mnist')
+    X_train, X_valid, y_train, y_valid = preprocess(X_main, y_main)
 
-    bst = train(X_mn_train, X_mn_valid, y_mn_train, y_mn_valid)
-    acc = predict(X_test_mnist, y_test_mnist, bst)
-    print(acc)
+    bst = train(X_train, X_valid, y_train, y_valid)
+    predict(X_test, y_test, bst)
