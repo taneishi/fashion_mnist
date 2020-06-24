@@ -31,14 +31,16 @@ def load_data(path='data/fashion'):
     X_test = X_test.astype(np.float32)
     y_test = y_test.astype(np.float32)
 
-    print (X_main.shape, y_main.shape)
-    print (X_test.shape, y_test.shape)
+    print(path)
+    print(X_main.shape, y_main.shape)
+    print(X_test.shape, y_test.shape)
 
     return X_main, y_main, X_test, y_test
 
-def preprocess(X, y, sc):
+def preprocess(X, y):
     ### Standard scaling the pixel values with mean=0.0 and var=1.0
 
+    sc = StandardScaler()
     X_std = sc.fit_transform(X)
 
     ### Splitting the train dataset into train and validation sets
@@ -52,7 +54,7 @@ def train(X_train, X_valid, y_train, y_valid):
 
     param_list = [('eta', 0.08), ('max_depth', 6), ('subsample', 0.8), ('colsample_bytree', 0.8),
             ('objective', 'multi:softmax'), ('eval_metric', 'merror'), ('alpha', 8), ('lambda', 2), ('num_class', 10)]
-    n_rounds = 10 #600
+    n_rounds = 600
     early_stopping = 50
         
     d_train = xgb.DMatrix(X_train, label=y_train)
@@ -62,9 +64,10 @@ def train(X_train, X_valid, y_train, y_valid):
 
     return bst
 
-def predict(X_test, y_test, sc, bst):
+def predict(X_test, y_test, bst):
     ### Standard scaling the test-sets for both datasets
 
+    sc = StandardScaler()
     X_test_std = sc.fit_transform(X_test)
 
     ### Predicting with trained classifiers
@@ -77,17 +80,17 @@ def predict(X_test, y_test, sc, bst):
     return np.sum(y_pred == y_test) / y_test.shape
 
 if __name__ == '__main__':
-    X_main, y_main, X_test, y_test = load_data('data/fashion')
-    X_mnist, y_mnist, X_test_mnist, y_test_mnist = load_data('data/mnist')
 
-    sc = StandardScaler()
-    X_train, X_valid, y_train, y_valid = preprocess(X_main, y_main, sc)
-    X_mn_train, X_mn_valid, y_mn_train, y_mn_valid = preprocess(X_mnist, y_mnist, sc)
+    X_main, y_main, X_test, y_test = load_data('data/fashion')
+    X_train, X_valid, y_train, y_valid = preprocess(X_main, y_main)
 
     bst = train(X_train, X_valid, y_train, y_valid)
-    bst = train(X_mn_train, X_mn_valid, y_mn_train, y_mn_valid)
-
-    acc = predict(X_test, y_test, sc, bst)
+    acc = predict(X_test, y_test, bst)
     print(acc)
-    acc = predict(X_test_mnist, y_test_mnist, sc, bst)
+
+    X_mnist, y_mnist, X_test_mnist, y_test_mnist = load_data('data/mnist')
+    X_mn_train, X_mn_valid, y_mn_train, y_mn_valid = preprocess(X_mnist, y_mnist)
+
+    bst = train(X_mn_train, X_mn_valid, y_mn_train, y_mn_valid)
+    acc = predict(X_test_mnist, y_test_mnist, bst)
     print(acc)
