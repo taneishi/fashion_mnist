@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
+import argparse
 import timeit
 import xgboost as xgb
 
@@ -32,9 +33,7 @@ def load_data(path='data/fashion'):
     X_test = X_test.astype(np.float32)
     y_test = y_test.astype(np.float32)
 
-    print(path)
-    print(X_main.shape, y_main.shape)
-    print(X_test.shape, y_test.shape)
+    print('%s train shape %s test shape %s' % (path, X_main.shape, X_test.shape))
 
     return X_main, y_main, X_test, y_test
 
@@ -50,20 +49,18 @@ def preprocess(X, y):
 
     return X_train, X_valid, y_train, y_valid
 
-def train(X_train, X_valid, y_train, y_valid):
+def train(X_train, X_valid, y_train, y_valid, args):
     ### Training XgBoost classifier on the dataset
 
-    param_list = [('eta', 0.08), ('max_depth', 6), ('subsample', 0.8), ('colsample_bytree', 0.8),
-            ('objective', 'multi:softmax'), ('eval_metric', 'merror'), ('alpha', 8), ('lambda', 2), ('num_class', 10)]
-    n_rounds = 600
-    early_stopping = 50
-        
+    param_list = vars(args).copy()
+    del param_list['early_stopping'], param_list['n_rounds']
     d_train = xgb.DMatrix(X_train, label=y_train)
     d_val = xgb.DMatrix(X_valid, label=y_valid)
     eval_list = [(d_train, 'train'), (d_val, 'validation')]
 
     start_time = timeit.default_timer()
-    bst = xgb.train(param_list, d_train, n_rounds, evals=eval_list, early_stopping_rounds=early_stopping, verbose_eval=True)
+    bst = xgb.train(param_list, d_train, args.n_rounds, evals=eval_list, 
+            early_stopping_rounds=args.early_stopping, verbose_eval=False)
     print('%6.3f sec' % (timeit.default_timer() - start_time))
 
     return bst
@@ -85,15 +82,30 @@ def predict(X_test, y_test, bst):
     print('accuracy %5.2f%%' % (acc * 100.))
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--eta', default=0.08, type=float)
+    parser.add_argument('--max_depth', default=6, type=int)
+    parser.add_argument('--subsample', default=0.8, type=float)
+    parser.add_argument('--colsample_bytree', default=0.8, type=float)
+    parser.add_argument('--objective', default='multi:softmax', type=str)
+    parser.add_argument('--eval_metric', default='merror', type=str)
+    parser.add_argument('--alpha', default=8, type=int)
+    parser.add_argument('--lambda', default=2, type=int)
+    parser.add_argument('--num_class', default=10, type=int)
+    parser.add_argument('--n_rounds', default=60, type=int)
+    parser.add_argument('--early_stopping', default=50, type=int)
+    args = parser.parse_args()
+
+    print(vars(args))
 
     X_main, y_main, X_test, y_test = load_data('data/fashion')
     X_train, X_valid, y_train, y_valid = preprocess(X_main, y_main)
 
-    bst = train(X_train, X_valid, y_train, y_valid)
+    bst = train(X_train, X_valid, y_train, y_valid, args)
     predict(X_test, y_test, bst)
 
     X_main, y_main, X_test, y_test = load_data('data/mnist')
     X_train, X_valid, y_train, y_valid = preprocess(X_main, y_main)
 
-    bst = train(X_train, X_valid, y_train, y_valid)
+    bst = train(X_train, X_valid, y_train, y_valid, args)
     predict(X_test, y_test, bst)
