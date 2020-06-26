@@ -18,7 +18,7 @@ def load_mnist(path, kind='train'):
         labels = np.frombuffer(lbpath.read(), dtype=np.uint8, offset=8)
 
     with gzip.open(images_path, 'rb') as imgpath:
-        images = np.frombuffer(imgpath.read(), dtype=np.uint8, offset=16).reshape(len(labels), 784)
+        images = np.frombuffer(imgpath.read(), dtype=np.uint8, offset=16).reshape(len(labels), 28*28)
 
     return images, labels
 
@@ -60,7 +60,7 @@ def train(X_train, X_valid, y_train, y_valid, args):
 
     start_time = timeit.default_timer()
     bst = xgb.train(param_list, d_train, args.n_rounds, evals=eval_list, 
-            early_stopping_rounds=args.early_stopping, verbose_eval=False)
+            early_stopping_rounds=args.early_stopping, verbose_eval=50)
     print('%6.3f sec' % (timeit.default_timer() - start_time))
 
     return bst
@@ -92,7 +92,7 @@ if __name__ == '__main__':
     parser.add_argument('--alpha', default=8, type=int)
     parser.add_argument('--lambda', default=2, type=int)
     parser.add_argument('--num_class', default=10, type=int)
-    parser.add_argument('--n_rounds', default=60, type=int)
+    parser.add_argument('--n_rounds', default=600, type=int)
     parser.add_argument('--early_stopping', default=50, type=int)
     args = parser.parse_args()
 
